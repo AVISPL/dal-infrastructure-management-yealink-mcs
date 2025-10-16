@@ -18,7 +18,7 @@ public enum Accessory {
 	CONNECT_WAY("ConnectWay", "connectWay"),
 	CONN_STATUS("ConnStatus", "connStatus"),
 	LAN_IP("PrivateIP", "lanIp"),
-	PROGRAM_VERSION("ProgramVersion", "programVersion"),
+	PROGRAM_VERSION("FirmwareVersion", "programVersion"),
 	LAST_REPORT_TIME("LastReportTime", "lastReportTime"),
 	;
 	private final String name;

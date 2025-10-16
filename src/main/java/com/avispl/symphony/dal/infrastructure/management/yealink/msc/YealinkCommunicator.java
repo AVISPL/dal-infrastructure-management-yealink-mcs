@@ -815,6 +815,9 @@
 								case CONN_STATUS:
 									stats.put(YealinkConstant.ACCESSORY + group + YealinkConstant.HASH + nameProperty, Objects.equals(value, "0") ? "Offline" : "Online");
 									break;
+								case CONNECT_WAY:
+									stats.put(YealinkConstant.ACCESSORY + group + YealinkConstant.HASH + nameProperty, Util.getDefaultValueForNullData(Util.uppercaseFirstCharacter(value.toLowerCase())));
+									break;
 								default:
 									stats.put(YealinkConstant.ACCESSORY + group + YealinkConstant.HASH + nameProperty, Util.getDefaultValueForNullData(value));
 									break;
