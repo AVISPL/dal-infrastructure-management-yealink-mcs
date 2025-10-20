@@ -4,11 +4,8 @@
 
 package com.avispl.symphony.dal.infrastructure.management.yealink.msc;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
@@ -16,11 +13,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
-import com.avispl.symphony.dal.infrastructure.management.yealink.msc.common.metric.DiagnosisRecord;
 
 /**
  * YealinkCommunicatorTest
@@ -59,7 +54,8 @@ public class YealinkCommunicatorTest {
 	void testGetAggregatorData() throws Exception {
 		extendedStatistic = (ExtendedStatistics) yealinkCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> stats = extendedStatistic.getStatistics();
-		Assertions.assertEquals("2", stats.get("MonitoredDevicesTotal"));
+		Map<String, String> dynamic = extendedStatistic.getDynamicStatistics();
+		Assertions.assertEquals("2", dynamic.get("MonitoredDevicesTotal"));
 	}
 
 	@Test
