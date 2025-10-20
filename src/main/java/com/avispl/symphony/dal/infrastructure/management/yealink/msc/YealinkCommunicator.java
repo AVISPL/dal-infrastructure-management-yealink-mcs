@@ -8,23 +8,18 @@
 	import java.util.ArrayList;
 	import java.util.Arrays;
 	import java.util.Collections;
-	import java.util.Comparator;
 	import java.util.Date;
 	import java.util.HashMap;
 	import java.util.HashSet;
 	import java.util.List;
 	import java.util.Map;
 	import java.util.Objects;
-	import java.util.Optional;
 	import java.util.Properties;
 	import java.util.Set;
 	import java.util.UUID;
-	import java.util.concurrent.ConcurrentHashMap;
 	import java.util.concurrent.ExecutorService;
 	import java.util.concurrent.Executors;
-	import java.util.concurrent.ScheduledExecutorService;
 	import java.util.concurrent.TimeUnit;
-	import java.util.concurrent.atomic.AtomicBoolean;
 	import java.util.concurrent.locks.ReentrantLock;
 	import java.util.stream.Collectors;
 
@@ -56,8 +51,6 @@
 	import com.avispl.symphony.dal.infrastructure.management.yealink.msc.common.constants.YealinkCommand;
 	import com.avispl.symphony.dal.infrastructure.management.yealink.msc.common.constants.YealinkConstant;
 	import com.avispl.symphony.dal.infrastructure.management.yealink.msc.common.metric.Accessory;
-	import com.avispl.symphony.dal.infrastructure.management.yealink.msc.common.metric.DiagnosisRecord;
-	import com.avispl.symphony.dal.infrastructure.management.yealink.msc.common.metric.DiagnosisStatus;
 	import com.avispl.symphony.dal.util.ControllablePropertyFactory;
 	import com.avispl.symphony.dal.util.StringUtils;
 
@@ -216,20 +209,17 @@
 		 */
 		private final Map<String, Map<String, String>> cachedMonitoringDevice = Collections.synchronizedMap(new HashMap<>());
 
+		/**
+		 * Device type filter used in Yealink API requests (sent as {@code filter.deviceType}).
+		 * <p>
+		 * Default is {@code "3"}. The value is kept as a string but typically represents a numeric type
+		 */
 		private String deviceTypeFiltering = "3";
 
 		/**
 		 * save time get token
 		 */
 		private Long tokenExpire;
-
-		private final ScheduledExecutorService diagPoller = Executors.newSingleThreadScheduledExecutor();
-
-		private final Map<String, DiagnosisRecord> DIAGNOSIS = new ConcurrentHashMap<>();
-
-		private final AtomicBoolean packetCaptureRunning = new AtomicBoolean(false);
-
-		private final Map<String, String> PACKET_CAPTURE_STATUS = new ConcurrentHashMap<>();
 
 		private static final long TOKEN_SKEW_MS = TimeUnit.SECONDS.toMillis(30);
 
@@ -401,6 +391,7 @@
 		 * @throws IOException If an I/O error occurs while loading the properties mapping YAML file.
 		 */
 		public YealinkCommunicator() throws IOException {
+			setBaseUri(YealinkConstant.BASE_URL);
 			adapterProperties = new Properties();
 			adapterProperties.load(getClass().getResourceAsStream("/version.properties"));
 			this.setTrustAllCertificates(true);
@@ -412,14 +403,14 @@
 		@Override
 		public void controlProperty(ControllableProperty cp) {
 			reentrantLock.lock();
-			try{
-				String property = cp.getProperty();
-				String deviceId = cp.getDeviceId();
-				String[] parts = property.split(YealinkConstant.HASH);
-				String key = property.contains(YealinkConstant.HASH) ? parts[1] : property;
+			String property = cp.getProperty();
+			String deviceId = cp.getDeviceId();
+			String[] parts = property.split(YealinkConstant.HASH);
+			String key = property.contains(YealinkConstant.HASH) ? parts[1] : property;
 
+			try{
 				boolean exists = aggregatedDeviceList.stream().anyMatch(d -> d.getDeviceId().equals(deviceId));
-				if (!exists) throw new IllegalStateException("Device not found: " + deviceId);
+				if (!exists) throw new IllegalStateException(String.format("Unable to control property: %s as the device does not exist.", property));
 
 				String request;
 				JsonNode response;
@@ -466,7 +457,7 @@
 							break;
 					}
 			} catch (Exception e) {
-				throw new RuntimeException(e);
+				throw new IllegalArgumentException(String.format("Unable to control property: %s as the device does not exist.", property));
 			} finally {
 				reentrantLock.unlock();
 			}
@@ -646,7 +637,7 @@
 		 * @return boolean True if valid user information, and vice versa.
 		 */
 		private boolean checkValidApiToken() throws Exception {
-			if (StringUtils.isNullOrEmpty(getLogin()) || StringUtils.isNullOrEmpty(getPassword())) {
+			if (StringUtils.isNotNullOrEmpty(getLogin()) || StringUtils.isNotNullOrEmpty(getPassword())) {
 				return true;
 			}
 			if (isTokenExpired()) {

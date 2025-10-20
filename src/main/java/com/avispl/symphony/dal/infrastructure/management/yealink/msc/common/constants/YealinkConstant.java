@@ -7,6 +7,7 @@ package com.avispl.symphony.dal.infrastructure.management.yealink.msc.common.con
  * @since 1.0.0
  */
 public class YealinkConstant {
+	public static final String BASE_URL = "v2";
 	public static final String HASH = "#";
 	public static final String REQUEST_BODY = "{\"grant_type\":\"client_credentials\"}";
 	public static final String NONE = "None";
