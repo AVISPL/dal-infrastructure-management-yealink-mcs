@@ -637,8 +637,8 @@
 		 * @return boolean True if valid user information, and vice versa.
 		 */
 		private boolean checkValidApiToken() throws Exception {
-			if (StringUtils.isNotNullOrEmpty(getLogin()) || StringUtils.isNotNullOrEmpty(getPassword())) {
-				return true;
+			if (StringUtils.isNullOrEmpty(getLogin()) || StringUtils.isNullOrEmpty(getPassword())) {
+				return false;
 			}
 			if (isTokenExpired()) {
 				retrieveToken();
