@@ -637,9 +637,6 @@
 		 * @return boolean True if valid user information, and vice versa.
 		 */
 		private boolean checkValidApiToken() throws Exception {
-			if (StringUtils.isNullOrEmpty(getLogin()) || StringUtils.isNullOrEmpty(getPassword())) {
-				return false;
-			}
 			if (isTokenExpired()) {
 				retrieveToken();
 			}
@@ -663,6 +660,9 @@
 		 * @throws ResourceNotReachableException if the endpoint is unreachable
 		 */
 		private void retrieveToken() throws FailedLoginException {
+			if (StringUtils.isNullOrEmpty(this.getLogin()) || StringUtils.isNullOrEmpty(this.getPassword())) {
+				throw new FailedLoginException("Username or Password field is empty. Please check device credentials");
+			}
 			try {
 				JsonNode response = doPost(YealinkCommand.GET_AUTH, YealinkConstant.REQUEST_BODY, JsonNode.class);
 				if (response.size() == 1) {
