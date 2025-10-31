@@ -220,28 +220,28 @@
 		/**
 		 * Device type filter used in Yealink API requests (sent as {@code filter.deviceType}).
 		 */
-		private String deviceTypeFiltering = "";
+		private String deviceTypeFilter = "";
 
 		/**
-		 * Retrieves {@link #deviceTypeFiltering}
+		 * Retrieves {@link #deviceTypeFilter}
 		 *
-		 * @return value of {@link #deviceTypeFiltering}
+		 * @return value of {@link #deviceTypeFilter}
 		 */
-		public String getDeviceTypeFiltering() {
-			return deviceTypeFiltering;
+		public String getDeviceTypeFilter() {
+			return deviceTypeFilter;
 		}
 
 		/**
-		 * Sets {@link #deviceTypeFiltering} value
+		 * Sets {@link #deviceTypeFilter} value
 		 *
-		 * @param deviceTypeFiltering new value of {@link #deviceTypeFiltering}
+		 * @param deviceTypeFilter new value of {@link #deviceTypeFilter}
 		 */
-		public void setDeviceTypeFiltering(String deviceTypeFiltering) {
-			DeviceType type = DeviceType.fromString(deviceTypeFiltering);
+		public void setDeviceTypeFilter(String deviceTypeFilter) {
+			DeviceType type = DeviceType.fromString(deviceTypeFilter);
 			if (type == null) {
-				this.deviceTypeFiltering = "";
+				this.deviceTypeFilter = "";
 			} else {
-				this.deviceTypeFiltering = type.canonical();
+				this.deviceTypeFilter = type.canonical();
 			}
 		}
 
@@ -703,7 +703,7 @@
 			try {
 				Map<String, String> filterDeviceType = new HashMap<>();
 				Map<String, Object> extraField = new HashMap<>();
-				if(!Objects.equals(deviceTypeFiltering, "")) {
+				if(!Objects.equals(deviceTypeFilter, "")) {
 					filterDeviceType.put("deviceType", getDeviceTypeCode());
 				}
 				extraField.put("filter", filterDeviceType);
@@ -759,8 +759,8 @@
 		 * Returns the API code for the current device type filter.
 		 */
 		public String getDeviceTypeCode() {
-			if (deviceTypeFiltering == null || deviceTypeFiltering.isEmpty()) return null;
-			return DeviceType.fromString(deviceTypeFiltering).code();
+			if (deviceTypeFilter == null || deviceTypeFilter.isEmpty()) return null;
+			return DeviceType.fromString(deviceTypeFilter).code();
 		}
 
 		/**
@@ -906,7 +906,7 @@
 		 */
 		private String getDeviceCount(){
 			try{
-				JsonNode res = this.doGet(String.format(YealinkCommand.GET_DEVICE_COUNT, deviceTypeFiltering), JsonNode.class);
+				JsonNode res = this.doGet(String.format(YealinkCommand.GET_DEVICE_COUNT, deviceTypeFilter), JsonNode.class);
 				if (res == null || !res.has("total")) {
 					throw new ResourceNotReachableException("Missing 'total' in response");
 				}
