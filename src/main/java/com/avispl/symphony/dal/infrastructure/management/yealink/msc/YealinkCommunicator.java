@@ -51,6 +51,7 @@
 	import com.avispl.symphony.dal.infrastructure.management.yealink.msc.common.constants.YealinkCommand;
 	import com.avispl.symphony.dal.infrastructure.management.yealink.msc.common.constants.YealinkConstant;
 	import com.avispl.symphony.dal.infrastructure.management.yealink.msc.common.metric.Accessory;
+	import com.avispl.symphony.dal.infrastructure.management.yealink.msc.common.metric.DeviceType;
 	import com.avispl.symphony.dal.util.ControllablePropertyFactory;
 	import com.avispl.symphony.dal.util.StringUtils;
 
@@ -79,8 +80,8 @@
 	 *   <li> SiteName </li>
 	 *   Accessory group
 	 *   <ul>
-	 *     <li>ConnectWay</li>
-	 *     <li>ConnStatus</li>
+	 *     <li>ConnectionMode</li>
+	 *     <li>ConnectStatus</li>
 	 *     <li>ID</li>
 	 *     <li>LastReportTime</li>
 	 *     <li>MAC</li>
@@ -210,18 +211,16 @@
 		private final Map<String, Map<String, String>> cachedMonitoringDevice = Collections.synchronizedMap(new HashMap<>());
 
 		/**
-		 * Device type filter used in Yealink API requests (sent as {@code filter.deviceType}).
-		 * <p>
-		 * Default is {@code "3"}. The value is kept as a string but typically represents a numeric type
-		 */
-		private String deviceTypeFiltering = "3";
-
-		/**
 		 * save time get token
 		 */
 		private Long tokenExpire;
 
 		private static final long TOKEN_SKEW_MS = TimeUnit.SECONDS.toMillis(30);
+
+		/**
+		 * Device type filter used in Yealink API requests (sent as {@code filter.deviceType}).
+		 */
+		private String deviceTypeFiltering = "";
 
 		/**
 		 * Retrieves {@link #deviceTypeFiltering}
@@ -238,7 +237,12 @@
 		 * @param deviceTypeFiltering new value of {@link #deviceTypeFiltering}
 		 */
 		public void setDeviceTypeFiltering(String deviceTypeFiltering) {
-			this.deviceTypeFiltering = deviceTypeFiltering;
+			DeviceType type = DeviceType.fromString(deviceTypeFiltering);
+			if (type == null) {
+				this.deviceTypeFiltering = "";
+			} else {
+				this.deviceTypeFiltering = type.canonical();
+			}
 		}
 
 		private String packetCaptureDuration = "180";
@@ -416,10 +420,14 @@
 				JsonNode response;
 				switch (key) {
 						case YealinkConstant.REBOOT:
+							String code = getDeviceTypeCode();
+							if(code == null){
+								throw new IllegalArgumentException("deviceType can not be empty");
+							}
 							ObjectNode payload = objectMapper.createObjectNode();
 							ArrayNode idsNode = payload.putArray("deviceIds");
 							idsNode.add(cp.getDeviceId().trim());
-							payload.put(YealinkConstant.DEVICE_TYPE, deviceTypeFiltering);
+							payload.put(YealinkConstant.DEVICE_TYPE, getDeviceTypeCode());
 							response = doPost(YealinkCommand.REBOOT_URI, payload, JsonNode.class);
 							if (response.has(YealinkConstant.ERROR) && !Objects.equals(response.get(YealinkConstant.FAILURE_COUNT).asText(), "0")) {
 								throw new RuntimeException(String.valueOf(response.get(YealinkConstant.ERROR).get(0).get("msg")));
@@ -456,6 +464,8 @@
 							}
 							break;
 					}
+			} catch (IllegalArgumentException | IllegalStateException e) {
+				throw e;
 			} catch (Exception e) {
 				throw new IllegalArgumentException(String.format("Unable to control property: %s as the device does not exist.", property));
 			} finally {
@@ -620,11 +630,11 @@
 						Util.getDefaultValueForNullData(adapterProperties.getProperty("aggregator.version")));
 				stats.put(YealinkConstant.ADAPTER_BUILD_DATE,
 						Util.getDefaultValueForNullData(adapterProperties.getProperty("aggregator.build.date")));
-				dynamicStatistics.put(YealinkConstant.MONITORED_DEVICES_TOTAL, getDeviceCount());
-
 				long adapterUptime = System.currentTimeMillis() - adapterInitializationTimestamp;
 				stats.put(YealinkConstant.ADAPTER_UPTIME_MIN, String.valueOf(adapterUptime / (1000 * 60)));
 				stats.put(YealinkConstant.ADAPTER_UPTIME, Util.normalizeUptime(adapterUptime / 1000));
+
+				dynamicStatistics.put(YealinkConstant.MONITORED_DEVICES_TOTAL, getDeviceCount());
 			} catch (Exception e) {
 				logger.error("Failed to populate metadata information with projectId ", e);
 			}
@@ -693,7 +703,9 @@
 			try {
 				Map<String, String> filterDeviceType = new HashMap<>();
 				Map<String, Object> extraField = new HashMap<>();
-				filterDeviceType.put("deviceType", deviceTypeFiltering);
+				if(!Objects.equals(deviceTypeFiltering, "")) {
+					filterDeviceType.put("deviceType", getDeviceTypeCode());
+				}
 				extraField.put("filter", filterDeviceType);
 
 				ObjectNode body = Util.buildRequestBody(0, 20, true, extraField, objectMapper);
@@ -741,6 +753,14 @@
 				map.putAll(mappingValue);
 				cachedMonitoringDevice.put(deviceId, map);
 			}
+		}
+
+		/**
+		 * Returns the API code for the current device type filter.
+		 */
+		public String getDeviceTypeCode() {
+			if (deviceTypeFiltering == null || deviceTypeFiltering.isEmpty()) return null;
+			return DeviceType.fromString(deviceTypeFiltering).code();
 		}
 
 		/**
