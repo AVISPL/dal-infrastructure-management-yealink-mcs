@@ -439,9 +439,9 @@
 							payload.put("type", 3);
 							payload.put("duration", String.valueOf(packetCaptureDuration));
 							request = String.format(YealinkCommand.PACKET_CAPTURE_URI, deviceId);
-							JsonNode startResp = doPut(request, payload, JsonNode.class);
-							if (startResp.has(YealinkConstant.ERROR)) {
-								throw new RuntimeException(String.format("Have error: %s", startResp.get(YealinkConstant.ERROR)));
+							response = doPut(request, payload, JsonNode.class);
+							if (response.has(YealinkConstant.ERROR)) {
+								throw new RuntimeException(String.format("Have error: %s", response.get(YealinkConstant.ERROR)));
 							}
 							break;
 						case YealinkConstant.EXPORT_LOG:
@@ -466,9 +466,20 @@
 					}
 			} catch (IllegalArgumentException | IllegalStateException e) {
 				throw e;
-			} catch (Exception e) {
-				throw new IllegalArgumentException(String.format("Unable to control property: %s as the device does not exist.", property));
-			} finally {
+			} catch (CommandFailureException e) {
+				String body = e.getResponse();
+				String code = extractApiStatusCode(body);
+				if(logger.isErrorEnabled()){
+					logger.error(body);
+				}
+				if(YealinkConstant.RESOURCE_ALREADY_EXISTS_CODE.equals(code)){
+					throw new IllegalArgumentException(property + "is still in progress, please try again later");
+				}
+			}
+			catch (Exception e) {
+				throw new IllegalArgumentException("Failed to control property '" + property + "': " + e.getMessage(), e);
+			}
+			finally {
 				reentrantLock.unlock();
 			}
 		}
@@ -896,6 +907,21 @@
 				logger.error("Can not get network interface");
 			}
 			return null;
+		}
+
+		/**
+		 * Extracts the API status code from a JSON error body.
+		 *
+		 * @param body raw response body expected to be a JSON object
+		 */
+		private String extractApiStatusCode(String body) {
+			if (body == null || body.isEmpty()) return null;
+			try {
+				JsonNode n = objectMapper.readTree(body);
+				return n.hasNonNull("code") ? n.get("code").asText() : null;
+			} catch (Exception e) {
+				return null;
+			}
 		}
 
 		/**
