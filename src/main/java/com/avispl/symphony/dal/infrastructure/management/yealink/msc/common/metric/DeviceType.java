@@ -45,8 +45,7 @@ public enum DeviceType {
 			case "roomdevice":
 				return ROOM_DEVICE;
 			default:
-				throw new IllegalArgumentException(
-						"Invalid deviceTypeFiltering: '" + input + "'.");
+				return null;
 		}
 	}
 }

@@ -19,6 +19,7 @@ public class YealinkConstant {
 	public static final String TOKEN_TYPE = "token_type";
 	public static final String EXPIRES_IN = "expires_in";
 	public static final String RESOURCE_ALREADY_EXISTS_CODE = "800003";
+	public static final String CANNOT_BE_NULL_CODE = "900400";
 	public static final String MODEL_NAME = "modelName";
 	public static final String ACCESSORY = "Accessory_";
 	public static final String DEVICE_ONLINE = "online";
