@@ -417,7 +417,6 @@
 				if (!exists) throw new IllegalStateException(String.format("Unable to control property: %s as the device does not exist.", property));
 
 				String request;
-				JsonNode response;
 				switch (key) {
 						case YealinkConstant.REBOOT:
 							String code = deviceTypeFilter;
