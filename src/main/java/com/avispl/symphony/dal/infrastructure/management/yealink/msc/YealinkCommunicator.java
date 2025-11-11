@@ -237,12 +237,12 @@
 		 * @param deviceTypeFilter new value of {@link #deviceTypeFilter}
 		 */
 		public void setDeviceTypeFilter(String deviceTypeFilter) {
-			DeviceType type = DeviceType.fromString(deviceTypeFilter);
-			if (type == null) {
-				this.deviceTypeFilter = "";
-			} else {
-				this.deviceTypeFilter = type.canonical();
+			if (deviceTypeFilter == null || deviceTypeFilter.trim().isEmpty()) {
+				this.deviceTypeFilter = YealinkConstant.EMPTY;
+				return;
 			}
+			DeviceType type = DeviceType.fromString(deviceTypeFilter);
+			this.deviceTypeFilter = (type != null) ? type.code() : deviceTypeFilter;
 		}
 
 		private String packetCaptureDuration = "180";
@@ -417,21 +417,17 @@
 				if (!exists) throw new IllegalStateException(String.format("Unable to control property: %s as the device does not exist.", property));
 
 				String request;
-				JsonNode response;
 				switch (key) {
 						case YealinkConstant.REBOOT:
-							String code = getDeviceTypeCode();
+							String code = deviceTypeFilter;
 							if(code == null){
 								throw new IllegalArgumentException("deviceType can not be empty");
 							}
 							ObjectNode payload = objectMapper.createObjectNode();
 							ArrayNode idsNode = payload.putArray("deviceIds");
 							idsNode.add(cp.getDeviceId().trim());
-							payload.put(YealinkConstant.DEVICE_TYPE, getDeviceTypeCode());
-							response = doPost(YealinkCommand.REBOOT_URI, payload, JsonNode.class);
-							if (response.has(YealinkConstant.ERROR) && !Objects.equals(response.get(YealinkConstant.FAILURE_COUNT).asText(), "0")) {
-								throw new RuntimeException(String.valueOf(response.get(YealinkConstant.ERROR).get(0).get("msg")));
-							}
+							payload.put(YealinkConstant.DEVICE_TYPE, deviceTypeFilter);
+							doPost(YealinkCommand.REBOOT_URI, payload, JsonNode.class);
 							break;
 						case YealinkConstant.PACKET_CAPTURE:
 							payload = objectMapper.createObjectNode();
@@ -439,24 +435,15 @@
 							payload.put("type", 3);
 							payload.put("duration", String.valueOf(packetCaptureDuration));
 							request = String.format(YealinkCommand.PACKET_CAPTURE_URI, deviceId);
-							JsonNode startResp = doPut(request, payload, JsonNode.class);
-							if (startResp.has(YealinkConstant.ERROR)) {
-								throw new RuntimeException(String.format("Have error: %s", startResp.get(YealinkConstant.ERROR)));
-							}
+							putAndCheck(request, payload, property);
 							break;
 						case YealinkConstant.EXPORT_LOG:
 							request = String.format(YealinkCommand.EXPORT_LOG_URI, deviceId);
-							response = doPut(request,new HashMap<>(), JsonNode.class);
-							if (response.has(YealinkConstant.ERROR)) {
-								throw new RuntimeException(String.format("Have error: %s", response.get(YealinkConstant.ERROR)));
-							}
+							putAndCheck(request, Collections.emptyMap(), property);
 							break;
 						case YealinkConstant.SCREEN_CAPTURE:
 							request = String.format(YealinkCommand.SCREEN_CAPTURE_URI, deviceId);
-							response = doPut(request,new HashMap<>(), JsonNode.class);
-							if (response.has(YealinkConstant.ERROR)) {
-								throw new RuntimeException(String.format("Have error: %s", response.get(YealinkConstant.ERROR)));
-							}
+							putAndCheck(request, Collections.emptyMap(), property);
 							break;
 						default:
 							if (logger.isWarnEnabled()) {
@@ -466,9 +453,23 @@
 					}
 			} catch (IllegalArgumentException | IllegalStateException e) {
 				throw e;
-			} catch (Exception e) {
-				throw new IllegalArgumentException(String.format("Unable to control property: %s as the device does not exist.", property));
-			} finally {
+			} catch (CommandFailureException e) {
+				String body = e.getResponse();
+				String code = extractApiStatusCode(body);
+				if(logger.isErrorEnabled()){
+					logger.error(body);
+				}
+				if(YealinkConstant.RESOURCE_ALREADY_EXISTS_CODE.equals(code)){
+					throw new IllegalArgumentException(property + "is still in progress, please try again later");
+				}
+				if(YealinkConstant.CANNOT_BE_NULL_CODE.equals(code)){
+					throw new IllegalArgumentException("DeviceTypeFilter cannot be null, please try again later");
+				}
+			}
+			catch (Exception e) {
+				throw new IllegalArgumentException("Failed to control property '" + property + "': " + e.getMessage(), e);
+			}
+			finally {
 				reentrantLock.unlock();
 			}
 		}
@@ -636,7 +637,7 @@
 
 				dynamicStatistics.put(YealinkConstant.MONITORED_DEVICES_TOTAL, getDeviceCount());
 			} catch (Exception e) {
-				logger.error("Failed to populate metadata information with projectId ", e);
+				throw new ResourceNotReachableException("Failed to populate metadata information with deviceTypeFilter ",e);
 			}
 		}
 
@@ -704,7 +705,7 @@
 				Map<String, String> filterDeviceType = new HashMap<>();
 				Map<String, Object> extraField = new HashMap<>();
 				if(!Objects.equals(deviceTypeFilter, "")) {
-					filterDeviceType.put("deviceType", getDeviceTypeCode());
+					filterDeviceType.put("deviceType", deviceTypeFilter);
 				}
 				extraField.put("filter", filterDeviceType);
 
@@ -753,14 +754,6 @@
 				map.putAll(mappingValue);
 				cachedMonitoringDevice.put(deviceId, map);
 			}
-		}
-
-		/**
-		 * Returns the API code for the current device type filter.
-		 */
-		public String getDeviceTypeCode() {
-			if (deviceTypeFilter == null || deviceTypeFilter.isEmpty()) return null;
-			return DeviceType.fromString(deviceTypeFilter).code();
 		}
 
 		/**
@@ -899,6 +892,36 @@
 		}
 
 		/**
+		 * Extracts the API status code from a JSON error body.
+		 *
+		 * @param body raw response body expected to be a JSON object
+		 */
+		private String extractApiStatusCode(String body) {
+			if (body == null || body.isEmpty()) return null;
+			try {
+				JsonNode n = objectMapper.readTree(body);
+				return n.hasNonNull("code") ? n.get("code").asText() : null;
+			} catch (Exception e) {
+				return null;
+			}
+		}
+
+		/**
+		 * Executes a PUT request and validates the JSON response.
+		 *
+		 * @param uri      target endpoint
+		 * @param payload  request body to send
+		 * @param property logical operation name for error context
+		 */
+		private void putAndCheck(String uri, Object payload, String property) throws Exception {
+			JsonNode resp = doPut(uri, payload, JsonNode.class);
+			if (resp != null && resp.has(YealinkConstant.ERROR)) {
+				throw new RuntimeException(
+						String.format("An error occurred during %s: %s", property, resp.get(YealinkConstant.ERROR)));
+			}
+		}
+
+		/**
 		 * Retrieves the total device count from Yealink and returns it as a string.
 		 *
 		 * @return device count as text (value of {@code total})
@@ -912,7 +935,7 @@
 				}
 				return res.path("total").asText();
 			}catch (Exception e){
-				throw new ResourceNotReachableException("Error when retrieving device count", e);
+				throw new ResourceNotReachableException("Invalid deviceTypeFilter: '" + deviceTypeFilter + "'.");
 			}
 		}
 	}
