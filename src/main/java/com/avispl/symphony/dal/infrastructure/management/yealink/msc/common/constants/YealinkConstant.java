@@ -18,7 +18,8 @@ public class YealinkConstant {
 	public static final String ACCESS_TOKEN = "access_token";
 	public static final String TOKEN_TYPE = "token_type";
 	public static final String EXPIRES_IN = "expires_in";
-	public static final String COLON = ":";
+	public static final String RESOURCE_ALREADY_EXISTS_CODE = "800003";
+	public static final String CANNOT_BE_NULL_CODE = "900400";
 	public static final String MODEL_NAME = "modelName";
 	public static final String ACCESSORY = "Accessory_";
 	public static final String DEVICE_ONLINE = "online";
@@ -28,7 +29,7 @@ public class YealinkConstant {
 	public static final String PACKET_CAPTURE = "PacketCapture";
 	public static final String EXPORT_LOG = "ExportLog";
 	public static final String SCREEN_CAPTURE = "ScreenCapture";
-	public static final String CONTROL_MANAGEMENT = "Control";
+	public static final String CONTROL_MANAGEMENT = "Controls";
 	public static final int DEFAULT_LIMIT = 20;
 	public static final int MAX_LIMIT = 1000;
 	public static final String MONITORING_CYCLE_DURATION = "LastMonitoringCycleDuration(s)";
