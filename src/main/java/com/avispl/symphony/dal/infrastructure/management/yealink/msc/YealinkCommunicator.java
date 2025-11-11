@@ -460,7 +460,7 @@
 					logger.error(body);
 				}
 				if(YealinkConstant.RESOURCE_ALREADY_EXISTS_CODE.equals(code)){
-					throw new IllegalArgumentException(property + "is still in progress, please try again later");
+					throw new IllegalArgumentException(property + " is still in progress, please try again later");
 				}
 				if(YealinkConstant.CANNOT_BE_NULL_CODE.equals(code)){
 					throw new IllegalArgumentException("DeviceTypeFilter cannot be null, please try again later");
