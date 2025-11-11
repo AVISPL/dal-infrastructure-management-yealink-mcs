@@ -637,8 +637,7 @@
 
 				dynamicStatistics.put(YealinkConstant.MONITORED_DEVICES_TOTAL, getDeviceCount());
 			} catch (Exception e) {
-				logger.error("Failed to populate metadata information with projectId ", e);
-				throw new ResourceNotReachableException(e.getMessage(),e);
+				throw new ResourceNotReachableException("Failed to populate metadata information with deviceTypeFilter ",e);
 			}
 		}
 
