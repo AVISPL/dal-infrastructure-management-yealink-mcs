@@ -456,8 +456,8 @@
 			} catch (CommandFailureException e) {
 				String body = e.getResponse();
 				String code = extractApiStatusCode(body);
-				if(logger.isErrorEnabled()){
-					logger.error(body);
+				if(logger.isWarnEnabled()){
+					logger.warn(body);
 				}
 				if(YealinkConstant.RESOURCE_ALREADY_EXISTS_CODE.equals(code)){
 					throw new IllegalArgumentException(property + " is still in progress, please try again later");
