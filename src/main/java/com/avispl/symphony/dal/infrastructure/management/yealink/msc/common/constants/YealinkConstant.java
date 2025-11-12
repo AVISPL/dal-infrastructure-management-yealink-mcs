@@ -30,6 +30,7 @@ public class YealinkConstant {
 	public static final String EXPORT_LOG = "ExportLog";
 	public static final String SCREEN_CAPTURE = "ScreenCapture";
 	public static final String CONTROL_MANAGEMENT = "Controls";
+	public static final String DEFAULT_TYPE_TO_REBOOT = "3";
 	public static final int DEFAULT_LIMIT = 20;
 	public static final int MAX_LIMIT = 1000;
 	public static final String MONITORING_CYCLE_DURATION = "LastMonitoringCycleDuration(s)";
