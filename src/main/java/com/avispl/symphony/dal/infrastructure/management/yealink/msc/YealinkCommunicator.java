@@ -420,13 +420,10 @@
 				switch (key) {
 						case YealinkConstant.REBOOT:
 							String code = deviceTypeFilter;
-							if(code == null){
-								throw new IllegalArgumentException("deviceType can not be empty");
-							}
 							ObjectNode payload = objectMapper.createObjectNode();
 							ArrayNode idsNode = payload.putArray("deviceIds");
 							idsNode.add(cp.getDeviceId().trim());
-							payload.put(YealinkConstant.DEVICE_TYPE, deviceTypeFilter);
+							payload.put(YealinkConstant.DEVICE_TYPE, !YealinkConstant.EMPTY.equals(code) ? deviceTypeFilter : YealinkConstant.DEFAULT_TYPE_TO_REBOOT);
 							doPost(YealinkCommand.REBOOT_URI, payload, JsonNode.class);
 							break;
 						case YealinkConstant.PACKET_CAPTURE:
@@ -637,7 +634,7 @@
 
 				dynamicStatistics.put(YealinkConstant.MONITORED_DEVICES_TOTAL, getDeviceCount());
 			} catch (Exception e) {
-				throw new ResourceNotReachableException("Failed to populate metadata information with deviceTypeFilter ",e);
+				throw new ResourceNotReachableException("Invalid deviceTypeFilter: '" + deviceTypeFilter + "'.",e);
 			}
 		}
 
