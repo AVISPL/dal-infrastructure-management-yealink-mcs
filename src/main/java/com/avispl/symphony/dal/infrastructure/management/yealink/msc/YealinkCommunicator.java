@@ -293,6 +293,11 @@
 		class YealinkCloudDataLoader implements Runnable {
 			private volatile boolean inProgress;
 			private volatile boolean dataFetchCompleted = false;
+			/**
+			 * Current monitoring cycle interval - amount of time that passes between 2 consecutive getMultipleStatistics calls
+			 * 60000ms by default
+			 * */
+			private final long systemMonitoringCycleInterval = 60000L;
 
 			public YealinkCloudDataLoader() {
 				inProgress = true;
@@ -340,7 +345,7 @@
 						if (!inProgress) {
 							break loop;
 						}
-						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 30000;
+						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * systemMonitoringCycleInterval);
 						lastMonitoringCycleDuration = (System.currentTimeMillis() - startCycle) / 1000;
 						logger.debug("Finished collecting devices statistics cycle at " + new Date() + ", total duration: " + lastMonitoringCycleDuration);
 
@@ -631,7 +636,7 @@
 				long adapterUptime = System.currentTimeMillis() - adapterInitializationTimestamp;
 				stats.put(YealinkConstant.ADAPTER_UPTIME_MIN, String.valueOf(adapterUptime / (1000 * 60)));
 				stats.put(YealinkConstant.ADAPTER_UPTIME, Util.normalizeUptime(adapterUptime / 1000));
-
+				stats.put(YealinkConstant.SYSTEM_MONITORING_CYCLE, String.valueOf(getMonitoringRate()));
 				dynamicStatistics.put(YealinkConstant.MONITORED_DEVICES_TOTAL, getDeviceCount());
 			} catch (Exception e) {
 				throw new ResourceNotReachableException("Invalid deviceTypeFilter: '" + deviceTypeFilter + "'.",e);
