@@ -33,10 +33,11 @@ public class YealinkConstant {
 	public static final String DEFAULT_TYPE_TO_REBOOT = "3";
 	public static final int DEFAULT_LIMIT = 20;
 	public static final int MAX_LIMIT = 1000;
-	public static final String MONITORING_CYCLE_DURATION = "LastMonitoringCycleDuration(s)";
+	public static final String MONITORING_CYCLE_DURATION = "LastMonitoringCycleDuration(sec)";
 	public static final String ADAPTER_VERSION = "AdapterVersion";
 	public static final String MONITORED_DEVICES_TOTAL = "MonitoredDevicesTotal";
 	public static final String ADAPTER_BUILD_DATE = "AdapterBuildDate";
 	public static final String ADAPTER_UPTIME_MIN = "AdapterUptime(min)";
 	public static final String ADAPTER_UPTIME = "AdapterUptime";
+	public static final String SYSTEM_MONITORING_CYCLE = "MonitoringCycleInterval(min)";
 }
