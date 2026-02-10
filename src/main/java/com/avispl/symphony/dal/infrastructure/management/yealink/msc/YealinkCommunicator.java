@@ -307,7 +307,6 @@
 			public void run() {
 				loop:
 				while (inProgress) {
-					long startCycle = System.currentTimeMillis();
 					try {
 						try {
 							TimeUnit.MILLISECONDS.sleep(500);
@@ -324,8 +323,10 @@
 						if (devicePaused) {
 							continue loop;
 						}
+						
+						long startCycle = System.currentTimeMillis();
 						if (logger.isDebugEnabled()) {
-							logger.debug("Fetching other than aggregated device list");
+							logger.debug("Fetching aggregated devices information.");
 						}
 
 						long currentTimestamp = System.currentTimeMillis();
