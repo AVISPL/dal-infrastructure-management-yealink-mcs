@@ -346,7 +346,7 @@
 							break loop;
 						}
 						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * systemMonitoringCycleInterval);
-						lastMonitoringCycleDuration = (System.currentTimeMillis() - startCycle) / 1000;
+						lastMonitoringCycleDuration =  Math.max((System.currentTimeMillis() - startCycle) / 1000, 1L);
 						logger.debug("Finished collecting devices statistics cycle at " + new Date() + ", total duration: " + lastMonitoringCycleDuration);
 
 						if (logger.isDebugEnabled()) {
