@@ -292,7 +292,7 @@
 
 		class YealinkCloudDataLoader implements Runnable {
 			private volatile boolean inProgress;
-			private volatile boolean dataFetchCompleted = false;
+
 			/**
 			 * Current monitoring cycle interval - amount of time that passes between 2 consecutive getMultipleStatistics calls
 			 * 60000ms by default
@@ -323,17 +323,6 @@
 						if (devicePaused) {
 							continue loop;
 						}
-						
-						long startCycle = System.currentTimeMillis();
-						if (logger.isDebugEnabled()) {
-							logger.debug("Fetching aggregated devices information.");
-						}
-
-						long currentTimestamp = System.currentTimeMillis();
-						if (!dataFetchCompleted && nextDevicesCollectionIterationTimestamp <= currentTimestamp) {
-							populateListDevice();
-							dataFetchCompleted = true;
-						}
 
 						while (nextDevicesCollectionIterationTimestamp > System.currentTimeMillis()) {
 							try {
@@ -346,12 +335,19 @@
 						if (!inProgress) {
 							break loop;
 						}
+						
+						long startCycle = System.currentTimeMillis();
+						if (logger.isDebugEnabled()) {
+							logger.debug("Fetching aggregated devices information.");
+						}
+
+						populateListDevice();
+
 						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * systemMonitoringCycleInterval);
 						lastMonitoringCycleDuration =  Math.max((System.currentTimeMillis() - startCycle) / 1000, 1L);
-						logger.debug("Finished collecting devices statistics cycle at " + new Date() + ", total duration: " + lastMonitoringCycleDuration);
 
 						if (logger.isDebugEnabled()) {
-							logger.debug("Finished collecting devices statistics cycle at " + new Date());
+							logger.debug("Finished collecting devices statistics cycle at " + new Date() + ", total duration: " + lastMonitoringCycleDuration);
 						}
 					} catch (Exception e) {
 						logger.error("Unexpected error occurred during main device collection cycle", e);
