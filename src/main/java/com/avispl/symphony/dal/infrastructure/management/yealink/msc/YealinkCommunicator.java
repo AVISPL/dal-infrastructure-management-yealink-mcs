@@ -342,8 +342,12 @@
 						}
 
 						populateListDevice();
-
-						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * systemMonitoringCycleInterval);
+						try {
+							nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * systemMonitoringCycleInterval);
+						} catch (NoSuchMethodError nsme) {
+							nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + systemMonitoringCycleInterval;
+							logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
+						}
 						lastMonitoringCycleDuration =  Math.max((System.currentTimeMillis() - startCycle) / 1000, 1L);
 
 						if (logger.isDebugEnabled()) {
@@ -633,7 +637,11 @@
 				long adapterUptime = System.currentTimeMillis() - adapterInitializationTimestamp;
 				stats.put(YealinkConstant.ADAPTER_UPTIME_MIN, String.valueOf(adapterUptime / (1000 * 60)));
 				stats.put(YealinkConstant.ADAPTER_UPTIME, Util.normalizeUptime(adapterUptime / 1000));
-				stats.put(YealinkConstant.SYSTEM_MONITORING_CYCLE, String.valueOf(getMonitoringRate()));
+				try {	
+					stats.put(YealinkConstant.SYSTEM_MONITORING_CYCLE, String.valueOf(getMonitoringRate()));
+				} catch (NoSuchMethodError nsme) {
+					logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
+				}
 				dynamicStatistics.put(YealinkConstant.MONITORED_DEVICES_TOTAL, getDeviceCount());
 			} catch (Exception e) {
 				throw new ResourceNotReachableException("Invalid deviceTypeFilter: '" + deviceTypeFilter + "'.",e);
