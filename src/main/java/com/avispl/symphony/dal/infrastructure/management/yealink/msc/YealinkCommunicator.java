@@ -292,7 +292,12 @@
 
 		class YealinkCloudDataLoader implements Runnable {
 			private volatile boolean inProgress;
-			private volatile boolean dataFetchCompleted = false;
+
+			/**
+			 * Current monitoring cycle interval - amount of time that passes between 2 consecutive getMultipleStatistics calls
+			 * 60000ms by default
+			 * */
+			private final long systemMonitoringCycleInterval = 60000L;
 
 			public YealinkCloudDataLoader() {
 				inProgress = true;
@@ -302,7 +307,6 @@
 			public void run() {
 				loop:
 				while (inProgress) {
-					long startCycle = System.currentTimeMillis();
 					try {
 						try {
 							TimeUnit.MILLISECONDS.sleep(500);
@@ -319,15 +323,6 @@
 						if (devicePaused) {
 							continue loop;
 						}
-						if (logger.isDebugEnabled()) {
-							logger.debug("Fetching other than aggregated device list");
-						}
-
-						long currentTimestamp = System.currentTimeMillis();
-						if (!dataFetchCompleted && nextDevicesCollectionIterationTimestamp <= currentTimestamp) {
-							populateListDevice();
-							dataFetchCompleted = true;
-						}
 
 						while (nextDevicesCollectionIterationTimestamp > System.currentTimeMillis()) {
 							try {
@@ -340,12 +335,23 @@
 						if (!inProgress) {
 							break loop;
 						}
-						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 30000;
-						lastMonitoringCycleDuration = (System.currentTimeMillis() - startCycle) / 1000;
-						logger.debug("Finished collecting devices statistics cycle at " + new Date() + ", total duration: " + lastMonitoringCycleDuration);
+						
+						long startCycle = System.currentTimeMillis();
+						if (logger.isDebugEnabled()) {
+							logger.debug("Fetching aggregated devices information.");
+						}
+
+						populateListDevice();
+						try {
+							nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * systemMonitoringCycleInterval);
+						} catch (NoSuchMethodError nsme) {
+							nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + systemMonitoringCycleInterval;
+							logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
+						}
+						lastMonitoringCycleDuration =  Math.max((System.currentTimeMillis() - startCycle) / 1000, 1L);
 
 						if (logger.isDebugEnabled()) {
-							logger.debug("Finished collecting devices statistics cycle at " + new Date());
+							logger.debug("Finished collecting devices statistics cycle at " + new Date() + ", total duration: " + lastMonitoringCycleDuration);
 						}
 					} catch (Exception e) {
 						logger.error("Unexpected error occurred during main device collection cycle", e);
@@ -631,7 +637,11 @@
 				long adapterUptime = System.currentTimeMillis() - adapterInitializationTimestamp;
 				stats.put(YealinkConstant.ADAPTER_UPTIME_MIN, String.valueOf(adapterUptime / (1000 * 60)));
 				stats.put(YealinkConstant.ADAPTER_UPTIME, Util.normalizeUptime(adapterUptime / 1000));
-
+				try {	
+					stats.put(YealinkConstant.SYSTEM_MONITORING_CYCLE, String.valueOf(getMonitoringRate()));
+				} catch (NoSuchMethodError nsme) {
+					logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
+				}
 				dynamicStatistics.put(YealinkConstant.MONITORED_DEVICES_TOTAL, getDeviceCount());
 			} catch (Exception e) {
 				throw new ResourceNotReachableException("Invalid deviceTypeFilter: '" + deviceTypeFilter + "'.",e);
